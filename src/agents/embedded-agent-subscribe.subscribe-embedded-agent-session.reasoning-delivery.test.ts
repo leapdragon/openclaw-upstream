@@ -123,14 +123,35 @@ describe("commentary preambles", () => {
     await subscription.waitForPendingEvents();
     expect(onAgentEvent.mock.calls.map(([event]) => event)).toEqual(
       [
-        ["update", "First. Second."],
-        ["update", "First. Second. Updated."],
-        ["end", "First. Second. Updated."],
+        ["update", "First.\nSecond."],
+        ["update", "First.\nSecond. Updated."],
+        ["end", "First.\nSecond. Updated."],
       ].map(([phase, progressText]) => ({
         stream: "item",
         data: { kind: "preamble", title: "Preamble", phase, progressText },
       })),
     );
+  });
+
+  it("keeps commentary line breaks so Markdown structure survives the tool boundary", async () => {
+    const onAgentEvent = vi.fn();
+    const { emit, subscription } = subscribe({ onAgentEvent });
+    const commentary =
+      "Checking two things first:\n\n- the **config**\n- the logs\n\nThen I'll fix it.";
+    const message: TestAssistant = {
+      role: "assistant",
+      api: "anthropic-messages",
+      phase: "commentary",
+      content: textAssistant(commentary).content,
+    };
+    emit({ type: "message_start", message });
+    update(emit, message, { type: "toolcall_start", contentIndex: 1, partial: message });
+    emit({ type: "message_end", message });
+    await subscription.waitForPendingEvents();
+    const progressTexts = onAgentEvent.mock.calls.map(
+      ([event]) => (event as { data: { progressText?: string } }).data.progressText,
+    );
+    expect(progressTexts).toEqual([commentary, commentary]);
   });
 });
 
