@@ -59,6 +59,16 @@ export function resolveAssistantLiveChatInput(data: unknown):
   };
 }
 
+/** Paragraph separator owed between a retained item prefix and the next item's text. */
+function missingItemBoundarySeparator(previousText: string, nextText: string): string {
+  if (!previousText || !nextText) {
+    return "";
+  }
+  const trailing = previousText.slice(-2).match(/\n*$/u)?.[0].length ?? 0;
+  const leading = nextText.slice(0, 2).match(/^\n*/u)?.[0].length ?? 0;
+  return "\n".repeat(Math.max(0, 2 - trailing - leading));
+}
+
 /** Merges assistant full-text and delta events into a capped live buffer. */
 export function resolveMergedAssistantText(params: {
   previousText: string;
@@ -69,7 +79,8 @@ export function resolveMergedAssistantText(params: {
   const { previousText, nextText, nextDelta, scope } = params;
   let text: string;
   if (scope) {
-    text = scope.prefix + nextText;
+    // Distinct items are separate messages; keep their paragraph boundary.
+    text = scope.prefix + missingItemBoundarySeparator(scope.prefix, nextText) + nextText;
   } else if (
     previousText &&
     nextText.length > previousText.length &&

@@ -2584,16 +2584,16 @@ describe("agent event handler", () => {
   });
 
   it.each([
-    { itemId: "message-2", text: "Hello", flags: {}, expected: "HelloHello" },
-    { itemId: "message-2", text: "Hi", flags: { replace: true }, expected: "HelloHi" },
-    { itemId: "message-2", text: "Hi", flags: { replaceable: true }, expected: "HelloHi" },
+    { itemId: "message-2", text: "Hello", flags: {}, expected: "Hello\n\nHello" },
+    { itemId: "message-2", text: "Hi", flags: { replace: true }, expected: "Hello\n\nHi" },
+    { itemId: "message-2", text: "Hi", flags: { replaceable: true }, expected: "Hello\n\nHi" },
     {
       itemId: "message-2",
       text: "Hi",
       flags: { replace: true, replaceable: true },
       expected: "Hi",
     },
-    { itemId: "message-1", text: "Hi", flags: { replace: true }, expected: "EarlierHi" },
+    { itemId: "message-1", text: "Hi", flags: { replace: true }, expected: "Earlier\n\nHi" },
     { itemId: "message-1", text: "", flags: { replace: true }, expected: "Earlier" },
   ])(
     "keeps item ownership across $itemId correction $text",
