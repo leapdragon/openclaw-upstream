@@ -226,7 +226,15 @@ cached request prefix without making the review part of the foreground session.
 
 The reviewer reuses the foreground provider, model, and available auth identity,
 with model fallbacks disabled. Provider pricing and data-handling terms apply to
-the additional run.
+the additional run. The review's system prompt renders the foreground session's
+identity rather than its private detached one, so content-addressed provider
+caches (for example vLLM prefix caching) see the same prefix bytes as the
+foreground turn.
+
+Set `skills.workshop.model` to run reviews on a different provider or model, for
+example a hosted model when the foreground runs on a local inference server that
+cannot spare a second full context. A configured review model does not inherit
+the foreground auth profile; it resolves its own provider auth.
 
 Weekly collection review also uses the configured agent model. It receives the
 names, descriptions, ownership state, and available usage counts and last-used
@@ -297,6 +305,7 @@ result pending regardless of autonomous mode.
 | `skills.workshop.maxPending`               | `50`     | Caps pending and quarantined proposals per workspace.                                                                    |
 | `skills.workshop.maxSkillBytes`            | `40000`  | Caps proposal body size in bytes.                                                                                        |
 | `skills.workshop.allowSymlinkTargetWrites` | `false`  | Allows apply through explicitly trusted workspace skill symlinks. Capture itself does not widen the trusted target list. |
+| `skills.workshop.model`                    | unset    | Provider/model ref or alias for background reviews; unset keeps the reviewed turn's model.                               |
 
 See [Skills config](/tools/skills-config#workshop-skills-workshop) for ranges and
 the complete `skills.*` schema.

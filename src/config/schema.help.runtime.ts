@@ -503,6 +503,8 @@ export const RUNTIME_FIELD_HELP: Record<string, string> = {
     'Controls background learning: "off" keeps only the suggestion nudge, "propose" creates pending proposals, and "auto" applies captured proposals and runs daily scanner-gated cleanup that can rewrite or drop eligible writable skills. Default: "auto".',
   "skills.workshop.allowSymlinkTargetWrites":
     "Allows Skill Workshop apply to write through symlinked workspace skill paths whose real target is already trusted by skills.load.allowSymlinkTargets. Keep disabled unless operators intentionally want generated proposal applies to mutate those shared skill roots.",
+  "skills.workshop.model":
+    "Provider/model ref or alias used for background Skill Workshop reviews (the experience review after deep turns and history scans). Defaults to the reviewed turn's own model, which keeps prompt-cache affinity on that provider. Point it at a cheaper or hosted model to keep review traffic off a local inference server; an unresolvable ref logs a warning and falls back to the default.",
   approvals:
     "Approval routing controls for forwarding exec and plugin approval requests to chat destinations outside the originating session. Keep these disabled unless operators need explicit out-of-band approval visibility.",
   "approvals.exec":

@@ -26,6 +26,7 @@ import {
   countSkillModelIterations,
   selectCurrentSkillTurnMessages,
 } from "./experience-review-prompt.js";
+import { resolveSkillWorkshopReviewModel } from "./review-model.js";
 import { assertSkillReviewRunSucceeded } from "./review-outcome.js";
 import { runSkillWorkshopReview } from "./review-run.js";
 import type { SkillWorkshopProposalMutationBudget } from "./types.js";
@@ -413,6 +414,14 @@ async function runSkillExperienceReviewInner(
   const origin = foregroundPromptContext.cronCreatorCallerOrigin;
   const capability = origin ? createCronCreatorAuthorityCapability(runId, origin) : undefined;
   const config = candidate.config ?? getRuntimeConfig();
+  const reviewModel = resolveSkillWorkshopReviewModel({
+    config,
+    agentId: foregroundPromptContext.agentId,
+    fallback: { provider: modelProviderId, model: modelId },
+  });
+  // The foreground auth profile belongs to the foreground provider/model only.
+  const keepsForegroundModel =
+    reviewModel.provider === modelProviderId && reviewModel.model === modelId;
   const proposalMutationBudget: SkillWorkshopProposalMutationBudget = {
     remaining: 1,
     readSkillHashes: new Map(),
@@ -458,6 +467,12 @@ async function runSkillExperienceReviewInner(
         ...foregroundPromptContext,
         sessionId: reviewSession.sessionId,
         sessionKey: reviewSession.sessionKey,
+        // The cloned transcript must render the foreground Runtime identity so the
+        // system prompt prefix stays byte-identical for content-addressed caches.
+        promptSessionIdentity: {
+          sessionKey: foregroundSessionKey,
+          sessionId: foregroundSessionId,
+        },
         // Delivery authority closes with the foreground turn and cannot be reused by this fork.
         messageActionTurnCapability: undefined,
         sessionManager: detachedSession,
@@ -466,9 +481,9 @@ async function runSkillExperienceReviewInner(
         config,
         abortSignal,
         prompt: buildSkillExperienceReviewPrompt({ ...candidate, existingSkills }),
-        provider: modelProviderId,
-        model: modelId,
-        ...(candidate.ctx.authProfileId
+        provider: reviewModel.provider,
+        model: reviewModel.model,
+        ...(keepsForegroundModel && candidate.ctx.authProfileId
           ? { authProfileId: candidate.ctx.authProfileId, authProfileIdSource: "user" as const }
           : {}),
         timeoutMs: EXPERIENCE_REVIEW_TIMEOUT_MS,

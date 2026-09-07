@@ -493,6 +493,7 @@ export const OpenClawSchemaShape = {
           allowSymlinkTargetWrites: z.boolean().optional(),
           maxPending: z.number().int().min(1).optional(),
           maxSkillBytes: z.number().int().min(1).optional(),
+          model: z.string().optional(),
         })
         .optional(),
       entries: z.record(z.string(), SkillEntrySchema).optional(),
