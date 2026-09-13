@@ -6,9 +6,8 @@
  */
 import { resolveTimerTimeoutMs } from "@openclaw/normalization-core/number-coercion";
 import { z } from "zod";
-import type { ThinkLevel } from "../auto-reply/thinking.js";
-import type { AgentModelConfig } from "../config/types.agents-shared.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
+import type { ToolsConfig } from "../config/types.tools.js";
 import {
   buildExecAutoReviewFailureDecision,
   defaultExecAutoReviewer,
@@ -33,14 +32,14 @@ import {
 import { coerceToolModelConfig } from "./tools/model-config.helpers.js";
 
 const DEFAULT_EXEC_REVIEWER_TIMEOUT_MS = 30_000;
-const EXEC_REVIEWER_MAX_TOKENS = 360;
+const EXEC_REVIEWER_MAX_TOKENS = 1_024;
 const MAX_EXEC_REVIEWER_INPUT_CHARS = 16_000;
 const EXEC_REVIEWER_TIMEOUT = Symbol("exec-reviewer-timeout");
 /**
  * Lowest enabled reasoning level, used once when a reasoning-only endpoint
  * rejects the reviewer's default request (sent with reasoning disabled).
  */
-const EXEC_REVIEWER_REASONING_FALLBACK: ThinkLevel = "minimal";
+const EXEC_REVIEWER_REASONING_FALLBACK: ReviewerThinking = "minimal";
 
 const execAutoReviewResponseSchema = z
   .object({
@@ -52,10 +51,9 @@ const execAutoReviewResponseSchema = z
   .strict();
 
 /** Config for the optional model-backed exec reviewer. */
-export type ExecReviewerConfig = {
-  model?: AgentModelConfig;
-  timeoutMs?: number;
-};
+export type ExecReviewerConfig = NonNullable<NonNullable<ToolsConfig["exec"]>["reviewer"]>;
+
+type ReviewerThinking = NonNullable<ExecReviewerConfig["thinking"]>;
 
 type ExecReviewerDeps = {
   acquireSimpleCompletionModelForAgent?: typeof acquireSimpleCompletionModelForAgent;
@@ -351,6 +349,18 @@ function resolveExecReviewerTimeoutMs(config?: ExecReviewerConfig): number {
   return resolveTimerTimeoutMs(config?.timeoutMs, DEFAULT_EXEC_REVIEWER_TIMEOUT_MS, 1_000);
 }
 
+/**
+ * Resolves a bounded completion budget for the exec auto-reviewer.
+ * Uses the default 1,024 tokens while clamping downward to the provider model's
+ * advertised maximum output token limit (floored to integer).
+ */
+function resolveExecReviewerMaxTokens(modelMaxTokens?: number): number {
+  if (typeof modelMaxTokens === "number" && Number.isFinite(modelMaxTokens) && modelMaxTokens > 0) {
+    return Math.max(1, Math.floor(Math.min(EXEC_REVIEWER_MAX_TOKENS, modelMaxTokens)));
+  }
+  return EXEC_REVIEWER_MAX_TOKENS;
+}
+
 function buildReviewerTimeoutDecision(timeoutMs: number): ExecAutoReviewDecision {
   return {
     decision: "ask",
@@ -481,7 +491,7 @@ export function createModelExecAutoReviewer(params: {
         );
       }
 
-      const runCompletion = async (reasoning?: ThinkLevel) => {
+      const runCompletion = async (reasoning: ReviewerThinking | undefined) => {
         const controller = new AbortController();
         completionController = controller;
         return await raceWithReviewerTimeout(
@@ -504,9 +514,12 @@ export function createModelExecAutoReviewer(params: {
                 ],
               },
               options: {
-                maxTokens: EXEC_REVIEWER_MAX_TOKENS,
+                maxTokens: resolveExecReviewerMaxTokens(prepared.model.maxTokens),
                 temperature: 0,
                 ...(reasoning ? { reasoning } : {}),
+                ...(params.reviewer?.fastMode !== undefined
+                  ? { serviceTier: params.reviewer.fastMode ? "priority" : "default" }
+                  : {}),
                 signal: params.signal
                   ? AbortSignal.any([controller.signal, params.signal])
                   : controller.signal,
@@ -522,16 +535,20 @@ export function createModelExecAutoReviewer(params: {
         );
       };
 
-      let result = await runCompletion();
+      let result = await runCompletion(params.reviewer?.thinking);
       if (result === EXEC_REVIEWER_TIMEOUT) {
         return buildReviewerTimeoutDecision(timeoutMs);
       }
       let completionFailure = extractCompletionFailure(result);
-      if (completionFailure && isReasoningConstraintErrorMessage(completionFailure)) {
-        // The reviewer asks for no reasoning level, which OpenAI-compatible
-        // transports send as reasoning disabled. Reasoning-only endpoints reject
-        // that outright, so retry once at the lowest enabled level instead of
-        // failing every review closed.
+      if (
+        completionFailure &&
+        !params.reviewer?.thinking &&
+        isReasoningConstraintErrorMessage(completionFailure)
+      ) {
+        // Without a configured reviewer thinking level the request carries no
+        // reasoning level, which OpenAI-compatible transports send as reasoning
+        // disabled. Reasoning-only endpoints reject that outright, so retry once
+        // at the lowest enabled level instead of failing every review closed.
         result = await runCompletion(EXEC_REVIEWER_REASONING_FALLBACK);
         if (result === EXEC_REVIEWER_TIMEOUT) {
           return buildReviewerTimeoutDecision(timeoutMs);

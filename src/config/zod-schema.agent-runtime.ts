@@ -364,6 +364,11 @@ const ToolExecBaseShape = {
   reviewer: z
     .object({
       model: AgentModelSchema.optional(),
+      /** Optional reasoning effort for model-backed approval reviews. */
+      thinking: z.enum(["minimal", "low", "medium", "high", "xhigh", "max"]).optional(),
+      /** Optional Fast processing for supported provider requests. */
+      fastMode: z.boolean().optional(),
+      /** Reviewer timeout in milliseconds (default: 30000). */
       timeoutMs: z.number().int().positive().optional(),
     })
     .strict()

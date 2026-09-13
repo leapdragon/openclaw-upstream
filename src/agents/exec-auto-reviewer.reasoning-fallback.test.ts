@@ -28,7 +28,10 @@ const reasoningConstraintError = {
   errorMessage: "400 Reasoning is mandatory for this endpoint and cannot be disabled.",
 };
 
-function createReviewer(complete: ReturnType<typeof vi.fn>) {
+function createReviewer(
+  complete: ReturnType<typeof vi.fn>,
+  reviewer?: Parameters<typeof createModelExecAutoReviewer>[0]["reviewer"],
+) {
   const prepare = vi.fn(async () => ({
     selection: {
       provider: "openrouter",
@@ -45,6 +48,7 @@ function createReviewer(complete: ReturnType<typeof vi.fn>) {
   }));
   return createModelExecAutoReviewer({
     cfg: {},
+    ...(reviewer ? { reviewer } : {}),
     deps: {
       acquireSimpleCompletionModelForAgent:
         prepare as unknown as typeof import("./simple-completion-runtime.js").acquireSimpleCompletionModelForAgent,
@@ -88,5 +92,16 @@ describe("createModelExecAutoReviewer reasoning fallback", () => {
       rationale: `exec reviewer completion failed: ${reasoningConstraintError.errorMessage}`,
     });
     expect(complete).toHaveBeenCalledTimes(2);
+  });
+  it("does not retry when a reviewer thinking level is configured", async () => {
+    const complete = vi.fn(async () => reasoningConstraintError);
+
+    await expect(createReviewer(complete, { thinking: "low" })(input)).resolves.toEqual({
+      decision: "ask",
+      risk: "unknown",
+      rationale: `exec reviewer completion failed: ${reasoningConstraintError.errorMessage}`,
+    });
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(complete.mock.calls[0]?.[0]?.options).toMatchObject({ reasoning: "low" });
   });
 });

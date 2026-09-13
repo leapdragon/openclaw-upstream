@@ -321,6 +321,10 @@ export type ExecToolConfig = {
   reviewer?: {
     /** Optional reviewer model override (provider/model or agent model config). */
     model?: AgentModelConfig;
+    /** Optional reasoning effort for model-backed approval reviews. */
+    thinking?: "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+    /** Optional Fast processing for supported provider requests. */
+    fastMode?: boolean;
     /** Reviewer timeout in milliseconds (default: 30000). */
     timeoutMs?: number;
   };
