@@ -206,6 +206,14 @@ describe("createReasoningTagTextPartitioner", () => {
         thinking: "private",
       },
     },
+    {
+      name: "a prior closed span does not settle a later table header",
+      input: "`safe` done\n\n| `x | <think>private</think> | y` |\n| - | - | - |\ntail",
+      expected: {
+        text: "`safe` done\n\n| `x |  | y` |\n| - | - | - |\ntail",
+        thinking: "private",
+      },
+    },
   ] as const)("is invariant at every chunk boundary: $name", ({ input, expected }) => {
     expect(collectVisibleMode(input, [])).toEqual(expected);
     for (let split = 0; split <= input.length; split += 1) {
@@ -278,6 +286,72 @@ describe("createReasoningTagTextPartitioner", () => {
     expect(Date.now() - startedAt).toBeLessThan(10_000);
   });
 
+  function streamChunked(input: string, size: number) {
+    const partitioner = createReasoningTagTextPartitioner();
+    let emittedBeforeFlush = "";
+    for (let start = 0; start < input.length; start += size) {
+      for (const delta of partitioner.pushVisible(input.slice(start, start + size))) {
+        if (delta.kind === "text") {
+          emittedBeforeFlush += delta.text;
+        }
+      }
+    }
+    const flushed = partitioner
+      .flush()
+      .filter((delta) => delta.kind === "text")
+      .map((delta) => delta.text)
+      .join("");
+    return { emittedBeforeFlush, flushed };
+  }
+
+  it("releases prose after a second inline code span before the stream ends", () => {
+    const input =
+      "Use `cpu.weight` (formerly `cpu.shares`) to set it, then keep streaming this trailing prose.\n\nNext paragraph.\n";
+
+    for (const size of [1, 3, 4, 7]) {
+      const { emittedBeforeFlush, flushed } = streamChunked(input, size);
+      expect(emittedBeforeFlush + flushed).toBe(input);
+      expect(emittedBeforeFlush).toContain("then keep streaming this trailing prose.");
+    }
+  });
+
+  it("releases prose after a fenced block with an info string before the stream ends", () => {
+    const input =
+      "Intro paragraph.\n\n```c\n/* blank lines inside the block spend the parse budget while it is open */\nstatic int pick(struct rq *rq) {\n    int n = rq->nr_running;\n\n    return n < 2;\n}\n```\n\nAfter the block, prose that should stream.\n\nAnother paragraph.\n";
+
+    for (const size of [1, 4, 16]) {
+      const { emittedBeforeFlush, flushed } = streamChunked(input, size);
+      expect(emittedBeforeFlush + flushed).toBe(input);
+      expect(emittedBeforeFlush).toContain("After the block, prose that should stream.");
+    }
+  });
+
+  it.each([
+    ["paragraph", "`x` ".repeat(128)],
+    ["list", "- item ".repeat(1000) + "`first` `second` tail"],
+    ["quote", "> item ".repeat(1000) + "`first` `second` tail"],
+    ["fence", "````text\n" + "`x`\n".repeat(128) + "````\nAfter"],
+    ["unclosed code", "Start `unfinished"],
+  ])("streams ordinary %s bytes without repeated ownership parsing", (_name, input) => {
+    const original = reasoningTagParser.parseMarkdownOwnership;
+    let parsedCharacters = 0;
+    const spy = vi
+      .spyOn(reasoningTagParser, "parseMarkdownOwnership")
+      .mockImplementation((text, options) => {
+        parsedCharacters += text.length;
+        return original(text, options);
+      });
+    try {
+      const partitioner = createReasoningTagTextPartitioner();
+      for (const char of input) {
+        expect(partitioner.pushVisible(char)).toEqual([{ kind: "text", text: char }]);
+      }
+      expect(partitioner.flush()).toEqual([]);
+      expect(parsedCharacters).toBeLessThanOrEqual(input.length * 4);
+    } finally {
+      spy.mockRestore();
+    }
+  });
   it("does not repeatedly reparse a growing list container", () => {
     const partitioner = createReasoningTagTextPartitioner();
     const startedAt = Date.now();
@@ -718,10 +792,11 @@ describe("createReasoningTagTextPartitioner", () => {
   it("reclassifies reasoning tags inside unclosed inline code on final flush", () => {
     const partitioner = createReasoningTagTextPartitioner();
 
-    expect(partitioner.pushVisible("Start `unclosed <think>secret</think> end")).toEqual([]);
+    expect(partitioner.pushVisible("Start `unclosed <think>secret</think> end")).toEqual([
+      { kind: "text", text: "Start `unclosed " },
+    ]);
     expect(partitioner.isInsideReasoning()).toBe(false);
     expect(partitioner.flush()).toEqual([
-      { kind: "text", text: "Start `unclosed " },
       { kind: "thinking", text: "secret" },
       { kind: "text", text: " end" },
     ]);
@@ -750,7 +825,7 @@ describe("createReasoningTagTextPartitioner", () => {
     const syntax = createReasoningTagTextPartitioner();
     const visible = createReasoningTagTextPartitioner();
 
-    expect(syntax.pushVisible("Use `<thi")).toEqual([]);
+    expect(syntax.pushVisible("Use `<thi")).toEqual([{ kind: "text", text: "Use `" }]);
     expect(syntax.hasPendingSyntax()).toBe(true);
 
     visible.markStrict();
