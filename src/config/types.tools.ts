@@ -325,6 +325,8 @@ export type ExecToolConfig = {
     thinking?: "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
     /** Optional Fast processing for supported provider requests. */
     fastMode?: boolean;
+    /** Completion token budget for a review (default: 1024, clamped to the model's maxTokens). */
+    maxTokens?: number;
     /** Reviewer timeout in milliseconds (default: 30000). */
     timeoutMs?: number;
   };
