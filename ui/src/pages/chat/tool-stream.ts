@@ -17,6 +17,7 @@ import { rolloverChatStream } from "./stream-causal-boundary.ts";
 import type { AgentEventPayload, ToolStreamEntry, ToolStreamHost } from "./tool-stream-contract.ts";
 import { buildToolStreamIdentity } from "./tool-stream-identity.ts";
 import { handlePreambleProgress } from "./tool-stream-preamble.ts";
+import { handleReasoningStream, settleReasoningSegments } from "./tool-stream-reasoning.ts";
 import { cancelToolStreamSync, syncToolStreamMessages } from "./tool-stream-state.ts";
 import { handleStreamStatus, resolveAcceptedSession } from "./tool-stream-status.ts";
 
@@ -416,6 +417,10 @@ export function handleAgentEvent(host: ToolStreamHost, payload?: AgentEventPaylo
     const runId = toTrimmedString(payload.runId);
     if (runId) {
       (host.knownAgentRunIds ??= new Set()).add(runId);
+      const phase = toTrimmedString(payload.data?.phase);
+      if (payload.stream === "lifecycle" && (phase === "end" || phase === "error")) {
+        settleReasoningSegments(host, runId);
+      }
     }
   }
 
@@ -432,6 +437,10 @@ export function handleAgentEvent(host: ToolStreamHost, payload?: AgentEventPaylo
   }
 
   if (handlePreambleProgress(host, payload)) {
+    return true;
+  }
+
+  if (handleReasoningStream(host, payload)) {
     return true;
   }
 

@@ -1,7 +1,11 @@
 // Leaf contract for the tool-stream lane: the host-state shape and event
 // payload types shared by tool-stream, its status/preamble modules, and the
 // chat state owners. Keep this module import-light so the lane stays acyclic.
-import type { ChatGuardianNotice, ChatStreamSegment } from "../../lib/chat/chat-types.ts";
+import type {
+  ChatGuardianNotice,
+  ChatReasoningSegment,
+  ChatStreamSegment,
+} from "../../lib/chat/chat-types.ts";
 import type { DiffStat } from "../../lib/chat/tool-call-diff.ts";
 import type { SessionCapability } from "../../lib/sessions/index.ts";
 import type { UiSessionDefaultsHost } from "../../lib/sessions/session-key.ts";
@@ -75,6 +79,8 @@ export type ToolStreamHost = {
   chatStreamStartedAt: number | null;
   chatRunStartup?: ChatRunStartupState | null;
   chatStreamSegments: ChatStreamSegment[];
+  /** Live reasoning blocks from the gateway `thinking` stream, oldest first. */
+  chatReasoningSegments?: ChatReasoningSegment[];
   toolStreamById: Map<string, ToolStreamEntry>;
   toolStreamOrder: string[];
   activityEventSeqById?: Map<string, number>;

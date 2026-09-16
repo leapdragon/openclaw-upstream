@@ -22,6 +22,7 @@ import type { BoardProvider } from "../../../lib/board/provider.ts";
 import type {
   ChatGuardianNotice,
   ChatQueueItem,
+  ChatReasoningSegment,
   ChatStreamSegment,
 } from "../../../lib/chat/chat-types.ts";
 import { buildCompanionQuestionPrefill } from "../../../lib/chat/companion-question.ts";
@@ -89,6 +90,8 @@ export type ChatThreadProps = ChatSendStatusActions & {
   browserTabPreviewsActive?: boolean;
   guardianNotices?: ChatGuardianNotice[];
   streamSegments: ChatStreamSegment[];
+  /** Live reasoning blocks for the active run; rendered only for `/reasoning stream`. */
+  reasoningSegments?: ChatReasoningSegment[];
   stream: string | null;
   streamStartedAt: number | null;
   /** Browser-local active run identity, retained across transient disconnects. */

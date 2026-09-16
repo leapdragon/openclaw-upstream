@@ -32,6 +32,7 @@ import {
   syncToolCardExpansionState,
 } from "../chat-thread.ts";
 import { hasForwardedSource } from "../chat-turn-boundary.ts";
+import { resolveTranscriptStreamInput, showsSavedReasoning } from "../reasoning-segments.ts";
 import { renderAgentRunFrame } from "./chat-agent-run-frame.ts";
 import { resolveChatDefaultAvatarPlacement } from "./chat-author-avatar.ts";
 import { renderBackgroundTasksStatusRow } from "./chat-background-tasks-status.ts";
@@ -95,7 +96,6 @@ export function projectChatTranscript(
     (sessionHost !== null &&
       isUiGlobalScopeConfigured(sessionHost) &&
       resolveUiGlobalAliasAgentId(sessionHost, props.sessionKey) !== null);
-  const showReasoning = props.showThinking && activeSession?.reasoningLevel === "on";
   const assistantIdentity = {
     name: props.assistantName,
     avatar: resolveAssistantDisplayAvatar(props),
@@ -128,7 +128,7 @@ export function projectChatTranscript(
     messages: props.messages,
     toolMessages: props.toolMessages,
     guardianNotices: props.guardianNotices,
-    streamSegments: props.streamSegments,
+    ...resolveTranscriptStreamInput(props, activeSession?.reasoningLevel),
     stream: displayStream,
     streamStartedAt: props.streamStartedAt,
     queue: props.queue,
@@ -333,7 +333,7 @@ export function projectChatTranscript(
       ...sharedMessageRenderOptions,
       transcriptVisible: props.transcriptVisible,
       latestBrowserTabs,
-      showReasoning,
+      showReasoning: props.showThinking && showsSavedReasoning(activeSession?.reasoningLevel),
       showToolCalls: props.showToolCalls,
       autoExpandToolCalls: Boolean(props.autoExpandToolCalls),
       isToolMessageExpanded: (messageId: string) => expandedToolCards.get(messageId),
@@ -665,7 +665,7 @@ export function projectChatTranscript(
     props.boardProvider?.snapshot$.value.revision,
     props.fullMessageAgentId,
     Boolean(props.loadFullAssistantMessage),
-    showReasoning,
+    props.showThinking && showsSavedReasoning(activeSession?.reasoningLevel),
     props.showToolCalls,
     Boolean(props.runActive),
     Boolean(props.runWorking),
