@@ -77,6 +77,12 @@ function isKnownOpenAICompletionsEndpoint(model: Pick<Model, "baseUrl">): boolea
   }
 }
 
+function hasDeclaredReasoningEfforts(compat: unknown): boolean {
+  const efforts = (compat as { supportedReasoningEfforts?: unknown } | undefined)
+    ?.supportedReasoningEfforts;
+  return Array.isArray(efforts) && efforts.some((effort) => typeof effort === "string" && effort);
+}
+
 function resolveOpenAICompletionsMaxTokens(
   model: OpenAIModeModel,
   options: OpenAICompletionsOptions | undefined,
@@ -565,12 +571,16 @@ export function buildOpenAICompletionsRequest(
       payload: params,
       thinkingEnabled: thinkingEnabled ?? false,
     });
+    // Qwen thinking is an on/off flag, but a model row that declares the efforts
+    // its server accepts also sends the graded level as `reasoning_effort`.
+    const qwenEffortLadder =
+      suppressScalarEffort && thinkingEnabled === true && hasDeclaredReasoningEfforts(model.compat);
     if (
       !isOpenRouter &&
       effort &&
       model.reasoning &&
-      compat.supportsReasoningEffort &&
-      !suppressScalarEffort
+      (compat.supportsReasoningEffort || qwenEffortLadder) &&
+      (!suppressScalarEffort || qwenEffortLadder)
     ) {
       params.reasoning_effort = effort;
     }
