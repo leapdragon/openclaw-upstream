@@ -142,6 +142,15 @@ function sameChatItem(previous: RenderChatItem, next: RenderChatItem): boolean {
         previous.runId === next.runId &&
         previous.boundaryId === next.boundaryId
       );
+    case "reasoning":
+      return (
+        previous.kind === "reasoning" &&
+        previous.text === next.text &&
+        previous.startedAt === next.startedAt &&
+        previous.isStreaming === next.isStreaming &&
+        previous.runId === next.runId &&
+        previous.boundaryId === next.boundaryId
+      );
     case "reading-indicator":
       return (
         previous.kind === "reading-indicator" &&
@@ -278,6 +287,7 @@ function sameChatItemsStructuralInput(
     previous.toolMessages === next.toolMessages &&
     previous.guardianNotices === next.guardianNotices &&
     previous.streamSegments === next.streamSegments &&
+    previous.reasoningSegments === next.reasoningSegments &&
     previous.streamStartedAt === next.streamStartedAt &&
     previous.queue === next.queue &&
     previous.initialTurnId === next.initialTurnId &&

@@ -80,6 +80,7 @@ export function renderAgentRunFrame(frame: AgentRunFrameRenderItem, opts: AgentR
         if (
           part.kind === "stream" ||
           part.kind === "reading-indicator" ||
+          part.kind === "reasoning" ||
           part.kind === "question"
         ) {
           return renderStreamGroupPart(part, opts.streamOptions, "standalone");

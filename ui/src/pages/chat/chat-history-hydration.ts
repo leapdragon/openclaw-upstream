@@ -1,4 +1,5 @@
 import { GatewayRequestError } from "../../api/gateway.ts";
+import type { ChatReasoningSegment } from "../../lib/chat/chat-types.ts";
 import {
   isHiddenAssistantStreamText,
   isVisibleChatHistoryMessage,
@@ -51,6 +52,7 @@ import {
   recordControlUiPerformanceEvent,
   roundedControlUiDurationMs,
 } from "./performance.ts";
+import { pruneReplacedReasoningSegments } from "./reasoning-segments.ts";
 import type { ChatHistoryRunObservation } from "./run-lifecycle.ts";
 import { applySessionMessagePayload } from "./session-message-apply.ts";
 import { rolloverChatStream } from "./stream-causal-boundary.ts";
@@ -344,6 +346,7 @@ export async function hydrateChatHistory(
         streamReconciliation,
       );
       pruneHistoryReplacedStreamSegments(state.chatMessages, state, streamReconciliation);
+      pruneReasoningSegmentsReplacedByHistory(state);
       const liveToolIds = currentLiveToolCallIds(state);
       if (
         state.chatRunId &&
@@ -395,6 +398,7 @@ export async function hydrateChatHistory(
           state.chatStreamStartedAt = null;
         }
         pruneHistoryReplacedStreamSegments(state.chatMessages, state, streamReconciliation);
+        pruneReasoningSegmentsReplacedByHistory(state);
         if (historyReplacedToolStream) {
           maybeResetToolStream(state, { preserveStreamSegments: true });
         } else {
@@ -452,4 +456,14 @@ export async function hydrateChatHistory(
     }
   }
   return undefined;
+}
+
+function pruneReasoningSegmentsReplacedByHistory(state: {
+  chatMessages: unknown[];
+  chatReasoningSegments?: ChatReasoningSegment[];
+}): void {
+  const pruned = pruneReplacedReasoningSegments(state.chatReasoningSegments, state.chatMessages);
+  if (pruned) {
+    state.chatReasoningSegments = pruned;
+  }
 }

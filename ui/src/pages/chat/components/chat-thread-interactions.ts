@@ -27,6 +27,7 @@ import type {
   ChatGuardianNotice,
   ChatQueueItem,
   ChatSelectionSource,
+  ChatReasoningSegment,
   ChatStreamSegment,
 } from "../../../lib/chat/chat-types.ts";
 import type { EmbedSandboxMode } from "../../../lib/chat/tool-display.ts";
@@ -125,6 +126,8 @@ export type ChatThreadProps = ChatSendStatusActions & {
   latestBrowserTabs?: ReadonlyMap<string, BrowserTabSelection>;
   guardianNotices?: ChatGuardianNotice[];
   streamSegments: ChatStreamSegment[];
+  /** Live reasoning blocks for the active run; rendered only for `/reasoning stream`. */
+  reasoningSegments?: ChatReasoningSegment[];
   stream: string | null;
   streamStartedAt: number | null;
   /** Browser-local active run identity, retained across transient disconnects. */

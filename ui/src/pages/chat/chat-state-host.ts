@@ -11,6 +11,7 @@ import type { ImageLightboxItem } from "../../components/image-lightbox.types.ts
 import type {
   ChatComposerMemoryFallback,
   ChatGuardianNotice,
+  ChatReasoningSegment,
   HumanMention,
 } from "../../lib/chat/chat-types.ts";
 import type { EmbedSandboxMode } from "../../lib/chat/tool-display.ts";
@@ -92,6 +93,7 @@ export type ChatPageHost = ChatHost &
     pendingSessionMessageReloadSessionKey: string | null;
     chatSubmitGuards: Set<string>;
     chatSendTimingsByRun: Map<string, ChatSendTimingEntry>;
+    chatReasoningSegments: ChatReasoningSegment[];
     compactionStatus: CompactionStatus | null;
     fallbackStatus: FallbackStatus | null;
     observerDigest: SessionObserverDigest | null;

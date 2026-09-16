@@ -35,6 +35,7 @@ import {
   syncToolCardExpansionState,
 } from "../chat-thread.ts";
 import { hasForwardedSource } from "../chat-turn-boundary.ts";
+import { resolveTranscriptStreamInput, showsSavedReasoning } from "../reasoning-segments.ts";
 import { renderAgentRunFrame } from "./chat-agent-run-frame.ts";
 import { resolveChatDefaultAvatarPlacement } from "./chat-author-avatar.ts";
 import { buildChatArchiveNotice, renderChatDivider, renderChatNotice } from "./chat-divider.ts";
@@ -117,7 +118,6 @@ export function projectChatTranscript(
     (sessionHost !== null &&
       isUiGlobalScopeConfigured(sessionHost) &&
       resolveUiGlobalAliasAgentId(sessionHost, props.sessionKey) !== null);
-  const showReasoning = props.showThinking && activeSession?.reasoningLevel === "on";
   const assistantAgentId = props.currentAgentId ?? props.fullMessageAgentId;
   const assistantAvatar = resolveAssistantDisplayAvatar({
     currentAgentId: assistantAgentId,
@@ -153,7 +153,7 @@ export function projectChatTranscript(
     messages: props.messages,
     toolMessages: props.toolMessages,
     guardianNotices: props.guardianNotices,
-    streamSegments: props.streamSegments,
+    ...resolveTranscriptStreamInput(props, activeSession?.reasoningLevel),
     stream: props.stream ?? null,
     streamStartedAt: props.streamStartedAt,
     queue: props.queue,
@@ -372,7 +372,7 @@ export function projectChatTranscript(
       ...sharedMessageRenderOptions,
       transcriptVisible: props.transcriptVisible,
       latestBrowserTabs,
-      showReasoning,
+      showReasoning: props.showThinking && showsSavedReasoning(activeSession?.reasoningLevel),
       showToolCalls: props.showToolCalls,
       activityRunId,
       activityGroupKey,
@@ -623,7 +623,7 @@ export function projectChatTranscript(
     props.boardProvider?.snapshot$.value.revision,
     props.fullMessageAgentId,
     Boolean(props.loadFullAssistantMessage),
-    showReasoning,
+    props.showThinking && showsSavedReasoning(activeSession?.reasoningLevel),
     props.showToolCalls,
     Boolean(props.runActive),
     activityRunId,

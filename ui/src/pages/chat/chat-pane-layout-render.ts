@@ -32,6 +32,7 @@ import {
 } from "./components/chat-session-workspace.ts";
 import { resolveAssistantDisplayAvatar } from "./components/chat-welcome.ts";
 import { resolveChatLinkFaviconFetcher } from "./link-favicon-loader.ts";
+import { readTranscriptStreamSegments } from "./reasoning-segments.ts";
 import {
   SIDEBAR_NARROW_BREAKPOINT_PX,
   sidebarMainPanel,
@@ -63,6 +64,14 @@ export abstract class ChatPaneLayoutRender extends ChatPaneBrowserAnnotationRend
     () => this.context,
     () => (this.state && !this.catalogHost ? this.resolveChatReadTarget() : undefined),
   );
+  /** Transcript stream inputs for the thread; catalog panes render no live stream. */
+  protected transcriptStreamProps(
+    state: Parameters<typeof readTranscriptStreamSegments>[0],
+    catalog: boolean,
+  ): ReturnType<typeof readTranscriptStreamSegments> {
+    return readTranscriptStreamSegments(state, catalog ? [] : null);
+  }
+
   private desktopFocus: {
     key: string;
     client: ChatPageHost["client"];

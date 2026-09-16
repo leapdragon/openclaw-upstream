@@ -168,7 +168,7 @@ export type StreamRunRenderItem = {
   runId?: string;
   boundaryId?: string;
   replyToSender?: MessageGroup["replyToSender"];
-  parts: Array<Extract<ChatItem, { kind: "stream" | "reading-indicator" }>>;
+  parts: Array<Extract<ChatItem, { kind: "stream" | "reading-indicator" | "reasoning" }>>;
 };
 export function coalesceStreamRuns(
   items: RenderChatItem[],
@@ -191,7 +191,7 @@ export function coalesceStreamRuns(
     }
   };
   for (const item of items) {
-    if (item.kind === "stream" || item.kind === "reading-indicator") {
+    if (item.kind === "stream" || item.kind === "reading-indicator" || item.kind === "reasoning") {
       const first = run[0];
       if (first && (first.runId !== item.runId || first.boundaryId !== item.boundaryId)) {
         flush();
