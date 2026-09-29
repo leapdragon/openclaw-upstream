@@ -24,6 +24,8 @@ export class ChatStateController<TState extends ChatPageHost> implements Reactiv
   private previousChatLoading = false;
   private previousChatMessages: unknown[] = [];
   private previousChatToolMessages: Record<string, unknown>[] = [];
+  private previousChatStreamSegments: ChatPageHost["chatStreamSegments"] = [];
+  private previousChatReasoningSegments: ChatPageHost["chatReasoningSegments"] = [];
   private previousGuardianNotices: ChatPageHost["guardianNotices"] = [];
   private previousChatStream: string | null = null;
   private previousRealtimeConversation: ChatPageHost["realtimeTalkConversation"] = [];
@@ -75,6 +77,8 @@ export class ChatStateController<TState extends ChatPageHost> implements Reactiv
     this.previousChatLoading = state.chatLoading;
     this.previousChatMessages = state.chatMessages;
     this.previousChatToolMessages = state.chatToolMessages;
+    this.previousChatStreamSegments = state.chatStreamSegments;
+    this.previousChatReasoningSegments = state.chatReasoningSegments;
     this.previousGuardianNotices = state.guardianNotices;
     this.previousChatStream = state.chatStream;
     this.previousRealtimeConversation = state.realtimeTalkConversation;
@@ -216,6 +220,8 @@ export class ChatStateController<TState extends ChatPageHost> implements Reactiv
     const messagesChanged =
       this.previousChatMessages !== state.chatMessages ||
       this.previousChatToolMessages !== state.chatToolMessages ||
+      this.previousChatStreamSegments !== state.chatStreamSegments ||
+      this.previousChatReasoningSegments !== state.chatReasoningSegments ||
       this.previousGuardianNotices !== state.guardianNotices ||
       this.previousRealtimeConversation !== state.realtimeTalkConversation;
     const streamChanged = this.previousChatStream !== state.chatStream;
@@ -225,6 +231,8 @@ export class ChatStateController<TState extends ChatPageHost> implements Reactiv
     this.previousChatLoading = state.chatLoading;
     this.previousChatMessages = state.chatMessages;
     this.previousChatToolMessages = state.chatToolMessages;
+    this.previousChatStreamSegments = state.chatStreamSegments;
+    this.previousChatReasoningSegments = state.chatReasoningSegments;
     this.previousGuardianNotices = state.guardianNotices;
     this.previousChatStream = state.chatStream;
     this.previousRealtimeConversation = state.realtimeTalkConversation;
