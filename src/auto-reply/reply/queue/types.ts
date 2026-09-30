@@ -222,6 +222,7 @@ export type FollowupRun = {
     | "senderIsOwner"
     | "approvalReviewerDeviceId"
     | "workspaceDir"
+    | "bootstrapWorkspaceDir"
     | "cwd"
     | "permissionMode"
     | "sessionRoot"
