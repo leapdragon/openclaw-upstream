@@ -959,7 +959,10 @@ export async function runMemoryFlushIfNeeded(params: {
         lane: CommandLane.Main,
       },
       harness: {
-        workspaceDir: params.followupRun.run.workspaceDir,
+        // Rooted and spawned sessions execute in an override workspace; agent memory
+        // still lives in the configured workspace that bootstrap reads it from.
+        workspaceDir:
+          params.followupRun.run.bootstrapWorkspaceDir ?? params.followupRun.run.workspaceDir,
         sessionKey: sourcePolicySessionKey,
         preparation: { kind: "direct" },
         resolveRuntimeOverride: (provider) =>

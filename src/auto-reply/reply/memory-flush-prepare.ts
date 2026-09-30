@@ -138,7 +138,9 @@ export async function prepareMemoryFlushAttempt(params: {
     });
     if (!isToolsMemoryFlushPlan(plan)) {
       await ensureMemoryFlushTargetFile({
-        workspaceDir: followupRun.run.workspaceDir,
+        // The flush target lives in the agent's configured workspace, not a
+        // rooted or spawned session cwd that overrides workspaceDir.
+        workspaceDir: followupRun.run.bootstrapWorkspaceDir ?? followupRun.run.workspaceDir,
         relativePath: plan.relativePath,
         assertCurrent: params.assertCurrent,
       });
