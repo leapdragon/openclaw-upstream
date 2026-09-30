@@ -611,6 +611,26 @@ describe("runPreparedReply media-only handling", () => {
     },
   );
 
+  it.each([
+    {
+      name: "keeps the configured workspace for memory when the session cwd overrides it",
+      sessionEntry: { sessionId: "session-1", updatedAt: 1, spawnedCwd: "/tmp/session-repo" },
+      expected: {
+        workspaceDir: "/tmp/session-repo",
+        bootstrapWorkspaceDir: "/tmp/agent-workspace",
+      },
+    },
+    {
+      name: "omits the bootstrap workspace when the session runs in the configured workspace",
+      sessionEntry: { sessionId: "session-1", updatedAt: 1 },
+      expected: { workspaceDir: "/tmp/agent-workspace", bootstrapWorkspaceDir: undefined },
+    },
+  ])("$name", async ({ sessionEntry, expected }) => {
+    await runPrepared({ workspaceDir: "/tmp/agent-workspace", sessionEntry });
+
+    expect(requireRunReplyAgentCall().followupRun.run).toMatchObject(expected);
+  });
+
   beforeEach(async () => {
     preparedReplyMockState.unexpectedCalls.length = 0;
     loadSessionEntryMock.mockReset();

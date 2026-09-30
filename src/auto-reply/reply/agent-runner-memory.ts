@@ -1530,6 +1530,10 @@ export async function runMemoryFlushIfNeeded(params: {
         ? params.sessionStore?.[params.sessionKey]?.systemPromptReport
         : undefined),
   );
+  // Rooted and spawned sessions execute in an override workspace; agent memory
+  // still lives in the configured workspace that bootstrap reads it from.
+  const memoryWorkspaceDir =
+    params.followupRun.run.bootstrapWorkspaceDir ?? params.followupRun.run.workspaceDir;
   const prepareMemoryFlushAttempt = async () => {
     const plan = resolveMemoryFlushPlan({
       cfg: params.cfg,
@@ -1561,7 +1565,7 @@ export async function runMemoryFlushIfNeeded(params: {
       signal: abortSignal,
     });
     await ensureMemoryFlushTargetFile({
-      workspaceDir: params.followupRun.run.workspaceDir,
+      workspaceDir: memoryWorkspaceDir,
       relativePath: writePath,
     });
     const systemPrompt = [params.followupRun.run.extraSystemPrompt, plan.systemPrompt]
@@ -1673,7 +1677,7 @@ export async function runMemoryFlushIfNeeded(params: {
         lane: CommandLane.Main,
       },
       harness: {
-        workspaceDir: params.followupRun.run.workspaceDir,
+        workspaceDir: memoryWorkspaceDir,
         sessionKey:
           params.runtimePolicySessionKey ??
           params.followupRun.run.runtimePolicySessionKey ??
