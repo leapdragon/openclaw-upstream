@@ -1351,6 +1351,10 @@ export async function runMemoryFlushIfNeeded(params: {
     abortSignal?.throwIfAborted();
     params.followupRun.operatorAuthority?.assertCurrent();
   };
+  // Rooted and spawned sessions execute in an override workspace; agent memory
+  // still lives in the configured workspace that bootstrap reads it from.
+  const memoryWorkspaceDir =
+    params.followupRun.run.bootstrapWorkspaceDir ?? params.followupRun.run.workspaceDir;
   const prepareMemoryFlushAttempt = async () => {
     assertMemoryFlushCurrent();
     const plan = resolveMemoryFlushPlan({
@@ -1384,7 +1388,7 @@ export async function runMemoryFlushIfNeeded(params: {
       signal: abortSignal,
     });
     await runtime.ensureMemoryFlushTargetFile({
-      workspaceDir: params.followupRun.run.workspaceDir,
+      workspaceDir: memoryWorkspaceDir,
       relativePath: writePath,
       assertCurrent: assertMemoryFlushCurrent,
     });
@@ -1509,7 +1513,7 @@ export async function runMemoryFlushIfNeeded(params: {
         lane: CommandLane.Main,
       },
       harness: {
-        workspaceDir: params.followupRun.run.workspaceDir,
+        workspaceDir: memoryWorkspaceDir,
         sessionKey:
           params.runtimePolicySessionKey ??
           params.followupRun.run.runtimePolicySessionKey ??
