@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { setReplyPayloadMetadata } from "../../auto-reply/reply-payload.js";
 import { assertSkillReviewRunSucceeded } from "./review-outcome.js";
 
 describe("Skill Workshop review outcome", () => {
@@ -19,6 +20,43 @@ describe("Skill Workshop review outcome", () => {
     ).toThrow("Proposal rejected: read the current skill and retry.");
   });
 
+  it("does not fail a review whose last tool call errored", () => {
+    // A trailing refused path, non-zero exec exit or mismatched edit is the model's to handle;
+    // the run itself completed and any direct edits already landed.
+    const warning = setReplyPayloadMetadata(
+      { isError: true, text: "⚠️ exec failed: command exited with code 1" },
+      { toolErrorWarning: { toolName: "exec" } },
+    );
+    expect(() =>
+      assertSkillReviewRunSucceeded({
+        meta: {
+          durationMs: 1,
+          toolSummary: {
+            calls: 7,
+            tools: ["read", "edit", "exec"],
+            failures: 2,
+            unresolvedError: { toolName: "exec" },
+          },
+        },
+        payloads: [warning],
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertSkillReviewRunSucceeded({
+        meta: {
+          durationMs: 1,
+          toolSummary: {
+            calls: 3,
+            tools: ["read", "edit"],
+            failures: 1,
+            unresolvedError: { toolName: "edit" },
+          },
+        },
+        payloads: [{ text: "NO_REPLY" }],
+      }),
+    ).not.toThrow();
+  });
+
   it("treats run-level terminal metadata as a review failure", () => {
     expect(() =>
       assertSkillReviewRunSucceeded({
@@ -28,6 +66,9 @@ describe("Skill Workshop review outcome", () => {
         },
       }),
     ).toThrow("model retries exhausted");
+    expect(() => assertSkillReviewRunSucceeded({ meta: { durationMs: 1, aborted: true } })).toThrow(
+      "aborted",
+    );
     expect(() =>
       assertSkillReviewRunSucceeded({ meta: { durationMs: 1 }, payloads: [{ text: "done" }] }),
     ).not.toThrow();
