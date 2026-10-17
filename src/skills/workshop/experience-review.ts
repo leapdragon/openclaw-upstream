@@ -251,7 +251,10 @@ async function runSkillExperienceReviewInner(candidate: ExperienceReviewCandidat
         ...(executionRoot ? { skillsSnapshot: { prompt: "", skills: [] } } : {}),
         config,
         abortSignal,
-        prompt: buildSkillExperienceReviewPrompt({ ...candidate, existingSkills }, mode),
+        prompt: buildSkillExperienceReviewPrompt(
+          { ...candidate, existingSkills, executionRoot },
+          mode,
+        ),
         provider: reviewModel.provider,
         model: reviewModel.model,
         ...(keepsForegroundModel && candidate.ctx.authProfileId

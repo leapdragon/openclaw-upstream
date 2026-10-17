@@ -657,6 +657,30 @@ describe("skill experience review prompt", () => {
     expect(prompt).not.toContain("at most one create");
     expect(prompt).not.toContain("inventory-is-discovered-with-file-tools");
   });
+
+  it("names the file-tool fence and points the automatic review back at the transcript", () => {
+    const prompt = buildSkillExperienceReviewPrompt(
+      { executionRoot: "/home/user/.openclaw/agents/main/agent/workshop-skills" },
+      "auto",
+    );
+    expect(prompt).toContain(
+      "File tools work only under /home/user/.openclaw/agents/main/agent/workshop-skills.",
+    );
+    expect(prompt).toContain("do not retry a refused path");
+    expect(prompt).toContain("Everything the session read or ran is already in the conversation");
+    expect(prompt).toContain("copy the old text exactly from that output");
+    expect(prompt).toContain("answer NO_REPLY before listing or reading anything");
+    expect(buildSkillExperienceReviewPrompt({}, "auto")).toContain(
+      "File tools work only under the Workshop skills directory.",
+    );
+  });
+
+  it("keeps the file-tool fence out of draft-only reviews", () => {
+    const prompt = buildSkillExperienceReviewPrompt({ executionRoot: "/tmp/root" }, "propose");
+    expect(prompt).not.toContain("File tools work only under");
+    expect(prompt).not.toContain("copy the old text exactly");
+    expect(prompt).toContain("answer NO_REPLY before listing or reading anything");
+  });
 });
 
 describe("skill experience review preparation", () => {
