@@ -572,6 +572,10 @@ export const OpenClawSchemaShape = {
             .optional(),
           /** Maximum Workshop skill file size in bytes. */
           maxSkillBytes: z.number().int().min(1).optional(),
+          /** Provider/model ref or alias for background reviews; unset keeps the reviewed turn's model. */
+          model: z.string().optional(),
+          /** Context token budget for background reviews (min 4096); unset keeps the built-in 16384. */
+          contextTokenBudget: z.number().int().min(4096).optional(),
         })
         .optional(),
       entries: z.record(z.string(), SkillEntrySchema).optional(),

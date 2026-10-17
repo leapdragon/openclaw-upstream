@@ -64,7 +64,8 @@ transcript events and 32 KiB. Large tool results can be replaced with explicit
 omission notices; missing outcomes must not be inferred. If a required context
 boundary cannot fit, the review stops without a model call.
 
-It reuses the foreground provider, model, and auth profile, with a minimal
+It reuses the foreground provider, model, and auth profile (or the model named
+by `skills.workshop.model`, see below), with a minimal
 prompt and only the `skill_workshop` tool. Workspace bootstrap files, the full
 skill catalog, client tools, and foreground-only instructions are omitted.
 The run targets a 16,384-token context budget. Review responses use at most
@@ -105,6 +106,14 @@ It does not capture environment-specific or transient failures, negative claims
 about tools, unresolved failures or guesses, knowledge about one codebase,
 one-off tasks, personal facts, secrets, or generic advice without concrete
 commands, paths, or ids.
+
+`skills.workshop.model` names a different provider/model ref or alias for the
+review, for example a smaller local model, so review traffic stays off the
+foreground provider. A review on another provider keeps running when a
+foreground turn starts; one on the foreground provider yields to it.
+`skills.workshop.contextTokenBudget` replaces the 16,384-token review budget,
+for example when that model has a large context or a prompt-overflow precheck
+is enabled.
 
 ## What you see
 

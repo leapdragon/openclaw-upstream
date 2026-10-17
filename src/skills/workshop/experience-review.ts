@@ -36,6 +36,7 @@ import { resolveSkillWorkshopConfig } from "./config.js";
 import { buildSkillExperienceReviewPrompt } from "./experience-review-prompt.js";
 import type { ExperienceReviewCandidate } from "./experience-review-scheduler.js";
 import { listWorkshopChanges } from "./library.js";
+import { resolveSkillWorkshopReviewModel } from "./review-model.js";
 import { assertSkillReviewRunSucceeded, postWorkshopChangeNotice } from "./review-outcome.js";
 import { runSkillWorkshopReview } from "./review-run.js";
 import { workshopReviewRunId } from "./review-undo.js";
@@ -119,6 +120,16 @@ async function runSkillExperienceReviewInner(candidate: ExperienceReviewCandidat
   const config = candidate.config;
   const runId = workshopReviewRunId(randomUUID());
   const reviewSession = resolveInternalSessionEffectsIdentity({ agentId, runId });
+  // `skills.workshop.model` routes the review off the foreground provider; the
+  // foreground auth profile belongs to the foreground provider/model only.
+  const reviewModel = resolveSkillWorkshopReviewModel({
+    config,
+    agentId,
+    fallback: { provider: candidate.ctx.modelProviderId, model: candidate.ctx.modelId },
+  });
+  const keepsForegroundModel =
+    reviewModel.provider === candidate.ctx.modelProviderId &&
+    reviewModel.model === candidate.ctx.modelId;
   const origin = foregroundPromptContext.cronCreatorCallerOrigin;
   const capability = origin ? createCronCreatorAuthorityCapability(runId, origin) : undefined;
   const writeScopes = [sessionKey, sqliteSessionIdWriteScope(candidate.source.sessionId)];
@@ -303,11 +314,13 @@ async function runSkillExperienceReviewInner(candidate: ExperienceReviewCandidat
       config,
       abortSignal,
       prompt: buildSkillExperienceReviewPrompt(candidate),
-      provider: candidate.ctx.modelProviderId,
-      model: candidate.ctx.modelId,
-      ...(candidate.ctx.authProfileId
+      provider: reviewModel.provider,
+      model: reviewModel.model,
+      ...(keepsForegroundModel && candidate.ctx.authProfileId
         ? { authProfileId: candidate.ctx.authProfileId, authProfileIdSource: "user" as const }
         : {}),
+      // A review on another provider does not compete with interactive work there.
+      yieldToForegroundWork: reviewModel.provider === candidate.ctx.modelProviderId,
       timeoutMs: resolveAgentTimeoutMs({ cfg: config }),
       runId,
       ...(capability ? { cronCreatorAuthorityCapability: capability } : {}),
