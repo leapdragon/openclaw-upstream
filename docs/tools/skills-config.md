@@ -390,6 +390,24 @@ and troubleshooting.
   them near 160 bytes because they appear in discovery and listing output.
 </ParamField>
 
+<ParamField path="skills.workshop.model" type="string">
+  Provider/model ref or alias for background Workshop reviews. Unset, a review
+  runs on the reviewed turn's own provider and model and is cancelled when
+  interactive work starts on that provider. Point it at a separate model, for
+  example a smaller local one, to keep review traffic off the foreground
+  provider; reviews on another provider are not cancelled by foreground turns.
+  An unresolvable ref logs a warning and falls back to the reviewed turn's
+  model.
+</ParamField>
+
+<ParamField path="skills.workshop.contextTokenBudget" type="number" default="16384">
+  Context token budget for background Workshop reviews (minimum 4096). The
+  default caps review cost on the foreground provider. Raise it when
+  `skills.workshop.model` routes reviews to a model with a large context, or
+  when `agents.defaults.compaction.midTurnPrecheck` is enabled: the precheck
+  rejects a review prompt that exceeds the budget minus its output reserve.
+</ParamField>
+
 `openclaw doctor --fix` migrates configs from the removed proposal flow: it
 changes `autonomous.mode: "propose"` to `"off"` and deletes
 `skills.workshop.approvalPolicy` and `skills.workshop.maxPending`. Run

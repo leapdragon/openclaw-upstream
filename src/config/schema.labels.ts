@@ -321,6 +321,8 @@ export const FIELD_LABELS: Record<string, string> = {
   "skills.load.watch": "Watch Skills",
   "skills.workshop.autonomous.mode": "Skill Workshop Autonomous Mode",
   "skills.workshop.autonomous.channelNotices": "Skill Workshop Channel Notices",
+  "skills.workshop.model": "Skill Workshop Review Model",
+  "skills.workshop.contextTokenBudget": "Skill Workshop Review Context Budget",
   "agents.defaults.skills": "Skills",
   "agents.defaults.subagents.delegationMode": "Sub-agent Delegation Mode",
   "agents.entries.*.subagents.delegationMode": "Sub-agent Delegation Mode",

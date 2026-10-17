@@ -8,6 +8,10 @@ import { clearAgentRunContext, registerAgentRunContext } from "../../infra/agent
 import { onGatewayWorkMetricsChanged } from "../../infra/gateway-work-metrics-events.js";
 import { createBackgroundWorkOwner } from "../../process/background-work.js";
 import { getGatewayRestartDrainSignal } from "../../process/gateway-work-admission.js";
+import { resolveSkillWorkshopConfig } from "./config.js";
+
+/** Upstream's review cost cap; `skills.workshop.contextTokenBudget` overrides it. */
+const DEFAULT_REVIEW_CONTEXT_TOKEN_BUDGET = 16_384;
 
 const reviews = createBackgroundWorkOwner({ owner: "core:skill-workshop", maxConcurrent: 1 });
 
@@ -21,16 +25,28 @@ export async function runSkillWorkshopReview(
     config: OpenClawConfig;
     preparedRunAdmission: NonNullable<RunEmbeddedAgentParams["preparedRunAdmission"]>;
     skillWorkshopReviewOf: string;
+    /**
+     * Abort the review when interactive work starts. True when the review shares the
+     * foreground provider; a review routed to a separate provider does not compete for
+     * that capacity, and cancelling it would only waste the prompt it already sent.
+     */
+    yieldToForegroundWork?: boolean;
   },
 ) {
   const foreground = new AbortController();
+  const yieldsToForeground = params.yieldToForegroundWork !== false;
   const yieldToForeground = () => {
+    if (!yieldsToForeground) {
+      return;
+    }
     const ownRun = isEmbeddedAgentRunActive(params.sessionId) ? 1 : 0;
     if (getActiveEmbeddedRunCount() > ownRun) {
       foreground.abort(new DOMException("Skill review yielded to foreground work", "AbortError"));
     }
   };
-  const unsubscribe = onGatewayWorkMetricsChanged(yieldToForeground);
+  const unsubscribe = yieldsToForeground
+    ? onGatewayWorkMetricsChanged(yieldToForeground)
+    : () => {};
   const abortSignal = AbortSignal.any([
     getGatewayRestartDrainSignal(),
     foreground.signal,
@@ -79,7 +95,9 @@ export async function runSkillWorkshopReview(
       gitCoauthorPrompt: undefined,
       forceMessageTool: false,
       forceHeartbeatTool: false,
-      contextTokenBudget: 16_384,
+      contextTokenBudget:
+        resolveSkillWorkshopConfig(params.config).contextTokenBudget ??
+        DEFAULT_REVIEW_CONTEXT_TOKEN_BUDGET,
       streamParams: { maxTokens: 2_048 },
       thinkLevel: "low",
       timeoutMs: Math.min(params.timeoutMs, 120_000),

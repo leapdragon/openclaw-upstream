@@ -541,6 +541,10 @@ export const RUNTIME_FIELD_HELP: Record<string, string> = {
     'Controls background learning: "auto" lets agents save and update Workshop skills after substantial work, and archives learned skills unused for 30 days. Every change is recorded and undoable. "off" disables background learning. Default: "auto".',
   "skills.workshop.autonomous.channelNotices":
     'Post background review notices to channel conversations, except Slack, with an Undo button (default: false); the Control UI shows that message as plain text. When disabled, notices appear only as the Learned row in the Control UI chat. Saying "undo" works either way.',
+  "skills.workshop.model":
+    "Provider/model ref or alias used for background Skill Workshop reviews. Unset, a review runs on the reviewed turn's own provider and model and yields to interactive work on that provider. Point it at a separate (cheaper or local) model to keep review traffic off the foreground provider; such reviews are not cancelled by foreground turns. An unresolvable ref logs a warning and falls back to the reviewed turn's model.",
+  "skills.workshop.contextTokenBudget":
+    "Context token budget for background Skill Workshop reviews (minimum 4096). The built-in 16384 caps review cost on the foreground provider; raise it when skills.workshop.model routes reviews to a model with a large context, or when a prompt-overflow precheck is enabled and rejects review prompts that exceed the budget minus its output reserve.",
   approvals:
     "Approval routing controls for forwarding exec and plugin approval requests to chat destinations outside the originating session. Keep these disabled unless operators need explicit out-of-band approval visibility.",
   "approvals.exec":

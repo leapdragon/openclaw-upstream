@@ -105,6 +105,59 @@ describe("runSkillExperienceReview", () => {
     }
   });
 
+  it("keeps an in-flight review running on a separate review provider", async () => {
+    const base = await createExperienceReviewCandidate(
+      "review-no-yield",
+      [{ role: "user", content: "Remember the verified procedure.", timestamp: 1 }],
+      { workspaceDir: state.workspaceDir, modelId: "gpt-test" },
+    );
+    const candidate = {
+      ...base,
+      config: {
+        ...base.config,
+        skills: {
+          ...base.config.skills,
+          workshop: {
+            ...base.config.skills?.workshop,
+            model: "litellm/aux-review",
+            contextTokenBudget: 65_536,
+          },
+        },
+      },
+    };
+    setRuntimeConfigSnapshot(candidate.config);
+    const review = await vi.importActual<{ runSkillWorkshopReview: typeof runSkillWorkshopReview }>(
+      "./review-run.js",
+    );
+    mocks.runSkillWorkshopReview.mockImplementation(review.runSkillWorkshopReview);
+    const ownHandle = createEmbeddedRunHandle();
+    const interactiveHandle = createEmbeddedRunHandle({ abort: vi.fn() });
+    mocks.runEmbeddedAgent.mockImplementation(
+      async (params: Parameters<typeof runSkillWorkshopReview>[0]) => {
+        setActiveEmbeddedRun(params.sessionId, ownHandle, params.sessionKey);
+        try {
+          // The review runs on the configured provider without the foreground auth profile.
+          expect(params.provider).toBe("litellm");
+          expect(params.model).toBe("aux-review");
+          expect(params.authProfileId).toBeUndefined();
+          expect(params.contextTokenBudget).toBe(65_536);
+          setActiveEmbeddedRun("interactive-session", interactiveHandle, "agent:other:interactive");
+          expect(params.abortSignal?.aborted).toBe(false);
+          return { meta: { durationMs: 1 } };
+        } finally {
+          clearActiveEmbeddedRun("interactive-session", interactiveHandle);
+          clearActiveEmbeddedRun(params.sessionId, ownHandle);
+        }
+      },
+    );
+    try {
+      await expect(runSkillExperienceReview(candidate)).resolves.toBeUndefined();
+      expect(mocks.runEmbeddedAgent).toHaveBeenCalledOnce();
+    } finally {
+      mocks.runEmbeddedAgent.mockReset();
+    }
+  });
+
   it("does not dispatch user reply hooks for a detached experience review", async () => {
     const candidate = await createExperienceReviewCandidate(
       "review-user-reply-hook",
