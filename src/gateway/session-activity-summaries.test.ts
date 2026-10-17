@@ -204,7 +204,7 @@ describe("Activity recap lifecycle with the canonical session store", () => {
     expect(complete).not.toHaveBeenCalled();
   });
 
-  it("backfills chronological chunks cumulatively and shares the durable result across viewers and restart", async () => {
+  it("summarizes only the most recent batch, reports the skipped backlog as omitted, and shares the durable result across viewers and restart", async () => {
     await messages(70);
     await persistSessionTranscriptTurn(scope, {
       messages: Array.from({ length: 129 }, (_, offset) => ({
@@ -264,32 +264,34 @@ describe("Activity recap lifecycle with the canonical session store", () => {
     expect(parse.mock.calls.some(([json]) => json.includes(unrelatedLabel))).toBe(false);
     parse.mockRestore();
     expect(view()?.state).toBe("current");
-    expect(complete).toHaveBeenCalledTimes(3);
+    // Local policy: one call reads the most recent 64 messages; the 135 older
+    // ones (the outcomes and the tool log) are skipped and reported as omitted.
+    expect(complete).toHaveBeenCalledTimes(1);
     const first = complete.mock.calls[0]?.[0];
-    const second = complete.mock.calls[1]?.[0];
     expect(first).toMatchObject({ model: "utility", provider: "test" });
     expect(first?.purpose).toBe("session-activity-summary");
-    expect(JSON.parse(first!.prompt).messages[0]).toContain("Outcome 0");
-    expect(JSON.parse(first!.prompt).messages.at(-1)).toContain("Outcome 63");
-    expect(JSON.parse(second!.prompt)).toMatchObject({ previousRecap: "Recap through batch 1." });
-    expect(JSON.parse(second!.prompt).messages.at(-1)).toContain("Outcome 69");
-    expect(JSON.parse(complete.mock.calls[2]![0].prompt).messages).toEqual([
+    expect(JSON.parse(first!.prompt)).toMatchObject({ previousRecap: "", omittedContent: true });
+    expect(JSON.parse(first!.prompt).messages).toEqual([
       "assistant: Shipped the fix. Waiting for review.",
     ]);
-    expect(complete.mock.calls.map(([request]) => request.prompt).join("\n")).not.toMatch(
-      /Internal tool log dump|internal_tool|Old progress/,
+    expect(first!.prompt).not.toMatch(
+      /Outcome 0|Internal tool log dump|internal_tool|Old progress/,
     );
     expect(read()?.activitySummary).toMatchObject({
       coveredMessages: 199,
       totalMessages: 199,
+      omittedContent: true,
       version: 1,
     });
+    expect(read()?.activitySummary?.text).toBe(
+      "Recap through batch 1. (Some oversized messages were omitted.)",
+    );
     expect(read()?.updatedAt).toBe(originalActivity);
     await service.dispose();
     service = createService();
     await awaitPublication(() => ensureRecap(target));
     expect(view()?.state).toBe("current");
-    expect(complete).toHaveBeenCalledTimes(3);
+    expect(complete).toHaveBeenCalledTimes(1);
   });
 
   it("keeps describe non-current while the newer first-turn recap is queued or held", async () => {
