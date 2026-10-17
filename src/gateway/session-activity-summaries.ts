@@ -59,7 +59,12 @@ import { defaultCompleteModel, defaultPrepareModel } from "./session-observer-mo
 import type { SessionRowProjection } from "./session-row-projection.js";
 
 const log = createSubsystemLogger("gateway/activity-summary");
-const REFRESH_MS = 90_000;
+// Local: recaps are a few words in the sidebar; one call per session every
+// fifteen minutes is plenty (upstream refreshes every 90 s), and each call
+// only looks at the most recent batch of messages (see
+// session-activity-summary-batch.ts), so a busy session never queues a backlog
+// of catch-up calls on the utility model.
+const REFRESH_MS = 900_000;
 const RETRY_MS = 120_000;
 const MAX_TRACKED = 256;
 const MAX_RETRIES = 3;

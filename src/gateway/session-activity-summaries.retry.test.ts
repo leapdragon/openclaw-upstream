@@ -554,7 +554,7 @@ describe("Activity recap admission, refresh, and provider recovery", () => {
         return completion.promise;
       });
       service.handleTranscript({ target: scope(target) });
-      expect(time.armedAtMs).toBe(time.clock.now() + 90_000);
+      expect(time.armedAtMs).toBe(time.clock.now() + 900_000);
       time.setTime(time.clock.now() + 3_600_000);
       const wake = time.wake();
       try {
